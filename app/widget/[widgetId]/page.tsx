@@ -26,7 +26,7 @@ export default function PublicWidgetPage({ params }: { params: { widgetId: strin
         {
           widget_id: params.widgetId, // ID виджета берем прямо из ссылки
           rating: rating,
-          text: text,
+          review: text,
         }
       ]);
 
