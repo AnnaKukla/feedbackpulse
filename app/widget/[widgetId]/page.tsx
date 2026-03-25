@@ -1,153 +1,103 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Plus, Globe } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Star } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function WidgetFeedbackPage() {
-  const params = useParams() as { widgetId: string };
-  const currentWidgetId = params.widgetId;
+// Описываем, как выглядит наш виджет
+type Widget = {
+  id: string;
+  name: string;
+  domain: string;
+};
 
-  const [rating, setRating] = useState<number>(0);
-  const [hoverRating, setHoverRating] = useState<number>(0);
-  const [review, setReview] = useState<string>("");
-  const [name, setName] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [submitted, setSubmitted] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+export default function WidgetsPage() {
+  // Список наших виджетов
+  const [widgets, setWidgets] = useState<Widget[]>([]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  // Состояния для управления модальным окном и формой
+  const [open, setOpen] = useState(false);
+  const [newWidgetName, setNewWidgetName] = useState("");
+  const [newWidgetDomain, setNewWidgetDomain] = useState("");
 
-    const { error: supabaseError } = await supabase
-      .from("feedback")
-      .insert([
-        {
-          widget_id: currentWidgetId,
-          rating,
-          review,
-          name: name.trim() || null,
-          email: email.trim() || null,
-        },
-      ]);
+  // Функция, которая срабатывает при нажатии "Сохранить виджет"
+  const handleCreateWidget = () => {
+    if (!newWidgetName || !newWidgetDomain) return; // Не сохраняем пустые поля
 
-    setLoading(false);
+    const newWidget: Widget = {
+      id: Math.random().toString(36).substring(7), // Генерируем случайный ID
+      name: newWidgetName,
+      domain: newWidgetDomain,
+    };
 
-    if (supabaseError) {
-      setError("Не удалось отправить отзыв. Попробуйте позже.");
-    } else {
-      setSubmitted(true);
-    }
+    setWidgets([newWidget, ...widgets]); // Добавляем новый виджет в список
+    setOpen(false); // Закрываем окно
+    setNewWidgetName(""); // Очищаем форму для следующего раза
+    setNewWidgetDomain("");
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{
-        background: "transparent",
-      }}
-    >
-      <Card className="w-full max-w-md bg-white bg-opacity-90 shadow-md border">
-        <CardHeader>
-          <CardTitle className="text-center text-2xl mb-2">Оцените наш сервис</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {submitted ? (
-            <div className="text-center py-10">
-              <div className="text-2xl mb-2">🎉</div>
-              <div className="font-semibold text-xl mb-1">Спасибо за ваш отзыв!</div>
-              <div className="text-muted-foreground text-sm">Ваше мнение очень важно для нас.</div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium ">Рейтинг</label>
-                <div className="flex items-center gap-1">
-                  {[1,2,3,4,5].map((val) => (
-                    <button
-                      type="button"
-                      key={val}
-                      aria-label={`Оценка ${val}`}
-                      onMouseEnter={() => setHoverRating(val)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      onClick={() => setRating(val)}
-                      className="focus:outline-none"
-                    >
-                      <Star
-                        className={`w-7 h-7 transition-colors
-                          ${((hoverRating || rating) >= val) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}
-                          ${((hoverRating || rating) >= val) ? "" : "fill-none"}
-                        `}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="review" className="text-sm font-medium">
-                  Ваш отзыв
-                </label>
-                <Textarea
-                  id="review"
-                  required
-                  minLength={3}
-                  maxLength={1000}
-                  rows={3}
-                  placeholder="Напишите ваш отзыв здесь..."
-                  value={review}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReview(e.target.value)}
-                  className="resize-none"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="name" className="text-sm">Имя (необязательно)</label>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Мои виджеты</h1>
+
+        {/* Само модальное окно */}
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" /> Создать виджет
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Создать новый виджет</DialogTitle>
+              <DialogDescription>
+                Введите название и домен сайта, где будет размещен виджет для сбора отзывов.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Название
+                </Label>
                 <Input
                   id="name"
-                  type="text"
-                  maxLength={80}
-                  value={name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                  placeholder="Ваше имя"
-                  autoComplete="name"
+                  placeholder="Например: Запись на консультации"
+                  value={newWidgetName}
+                  onChange={(e) => setNewWidgetName(e.target.value)}
+                  className="col-span-3"
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="email" className="text-sm">Email (необязательно)</label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="domain" className="text-right">
+                  Домен
+                </Label>
                 <Input
-                  id="email"
-                  type="email"
-                  maxLength={120}
-                  value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                  placeholder="Ваш email"
-                  autoComplete="email"
+                  id="domain"
+                  placeholder="psy-anna.ru"
+                  value={newWidgetDomain}
+                  onChange={(e) => setNewWidgetDomain(e.target.value)}
+                  className="col-span-3"
                 />
               </div>
-              {error && (
-                <div className="text-red-500 text-sm text-center">{error}</div>
-              )}
-              <CardFooter className="p-0 pt-2 flex flex-col items-stretch">
-                <Button
-                  type="submit"
-                  disabled={loading || rating < 1 || review.length < 3}
-                  className="w-full"
-                  size="lg"
-                >
-                  {loading ? "Отправка..." : "Отправить отзыв"}
-                </Button>
-              </CardFooter>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+            </div>
+            <DialogFooter>
+              <Button onClick={handleCreateWidget}>Сохранить виджет</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Условие: если виджетов 0, показываем заглушку. Если есть — рисуем карточки */}
+      {widgets.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-8 text-center">
+          <Globe className="h-10 w-10 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold">У вас пока нет ни одного виджета</h3>
+          <p className="mb-4 mt-2 text-sm text-muted-foreground">
+            Создайте свой первый виджет, чтобы начать собирать отзывы.
+          </p>
+          <Button
